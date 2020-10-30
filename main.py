@@ -8,31 +8,23 @@ import os
 import youtube_dl
 import logging
 
-API_TOKEN = '1329098332:AAF1yP2menisi0uE3P5CSP5MnvcuNoiW-iY'
-YOUTUBE_API = 'AIzaSyBWhXU8Ug6B3e17GoSQ22RT4jVDRD3iYN4'
-SEARCH_URL = 'https://www.youtube.com/results?search_query='
+from . import settings
 
 logging.basicConfig(level=logging.INFO)
-
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=settings.API_TOKEN)
 dp = Dispatcher(bot)
+download_callback = CallbackData('https', 'url')
 
 
-def set_options():
-    return {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-    }
+def download_music_file(url: str) -> (bytes, str):
+    """
+    This function download video from youtube and save it to mp3-file
 
-
-def _download_music(url):
-    options = set_options()
-
-    with youtube_dl.YoutubeDL(options) as ydl:
+    :param url: link on youtube video (must starts with 'https://www.youtube.com/watch?v=')
+    :return: tuple of data from mp3 file and name of mp3 file
+    """
+    # TODO downloading in some directory
+    with youtube_dl.YoutubeDL(settings.MP3_FILE_OPTIONS) as ydl:
         info_dict = ydl.extract_info(url, download=False)
         filename = f'{info_dict.get("title", None)}-{info_dict.get("id", None)}.mp3'
         ydl.download([url])
@@ -43,67 +35,109 @@ def _download_music(url):
     return data, filename
 
 
-def get_video_id(request):
-    youtube_searcher = build('youtube', 'v3', developerKey=YOUTUBE_API)
+def get_video_id(request: str) -> list:
+    """
+    This function use youtube api v3 to search videos
+
+    :param request:
+    :return: the first 5 videos that are the result of the search
+    """
+    youtube_searcher = build('youtube', 'v3', developerKey=settings.YOUTUBE_API)
     req = youtube_searcher.search().list(q=request, part='snippet', type='video')
-    res = req.execute()
+    result = req.execute()
 
-    id_arr = []
-    for item in res['items']:
-        id_arr.append(item['id']['videoId'])
+    id_array = []
+    for item in result['items']:
+        id_array.append(item['id']['videoId'])
 
-    return id_arr
+    return id_array
 
 
-download_callback = CallbackData('https', 'url')
+async def send_music_file(message_data):
+    """
+    This function send mp3-file to user
 
-# choice = InlineKeyboardMarkup(inline_keyboard=[
-#     [
-#         InlineKeyboardButton(text='download', callback_data=download_callback.new(
-#             url='pear'
-#         ))
-#     ]
-# ])
+    :param message_data: this parameter must be Message or CallbackQuery
+    :return:
+    """
+    if isinstance(message_data, types.Message):
+        data, filename = download_music_file(message_data)
+        await message_data.answer_audio(data)
+    else:
+        data, filename = download_music_file(message_data.data)
+        await message_data.message.answer_audio(data)
+
+    os.remove(filename)
+
+
+async def send_download_button(url):
+    """
+    This function make download button
+
+    :param url: link on youtube video
+    :return: Keyboard
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text='download', callback_data=download_callback.new(
+                url=url[6:]
+            ))
+        ]
+    ])
 
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
-    await message.reply('Hi!\nI\'m EchoBot!\nPowered by aiogram.')
+    await message.reply(
+        """
+        Hi, it is bot for downloading music from youtube.
+        This is how to use it:
+        /music [link to video]
+            bot will send you mp3-file.
+        /search [request]
+            bot will send you first 5 videos that are the result of 
+            searching on YouTube and then you can choose your video.
+        """
+    )
 
 
 @dp.callback_query_handler(text_contains='https')
 async def download_music_using_button(call: CallbackQuery):
-    data, filename = _download_music(call.data)
-
-    await call.message.answer_audio(data)
-    os.remove(filename)
+    """
+    This function handle button pressing
+    :param call: Callback from button
+    :return:
+    """
+    await send_music_file(call)
 
 
 @dp.message_handler(commands=['music'])
 async def download_music(message: types.Message):
+    """
+    This function handle url sent by user
+
+    :param message:
+    :return:
+    """
     if message.text == '/music':
         await message.answer('You must send url:\n/music https://www.youtube.com/example')
     if message.text[7:31] == 'https://www.youtube.com/':
-        data, filename = _download_music(message.text[7:])
-
-        await message.answer_audio(data)
-        os.remove(filename)
+        await send_music_file(message)
 
 
 @dp.message_handler(commands=['search'])
 async def search(message: types.Message):
+    """
+    This function handle searching of video on YouTube
+
+    :param message:
+    :return:
+    """
     if message.text != '/search':
-        print(f'\n{message.text[8:]}\n')
-        id_arr = get_video_id(message.text[8:])
-        for id in id_arr:
-            url = f'https://www.youtube.com/watch?v={id}'
-            choice = InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(text='download', callback_data=download_callback.new(
-                        url=url[6:]
-                    ))
-                ]
-            ])
+        id_array = get_video_id(message.text[8:])
+        for video_id in id_array:
+            url = settings.YOUTUBE_URL + video_id
+            choice = send_download_button(url)
             await message.answer(text=url, reply_markup=choice)
     else:
         await message.answer('You must send request:\n/search your text')
