@@ -61,7 +61,7 @@ async def send_music_file(message_data):
     :return:
     """
     if isinstance(message_data, types.Message):
-        data, filename = download_music_file(message_data)
+        data, filename = download_music_file(message_data.text[7:])
         await message_data.answer_audio(data)
     else:
         data, filename = download_music_file(message_data.data)
