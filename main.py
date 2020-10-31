@@ -11,7 +11,7 @@ import logging
 import settings
 
 logging.basicConfig(level=logging.INFO)
-bot = Bot(token=settings.API_TOKEN)
+bot = Bot(token=settings.TELEGRAM_API_TOKEN)
 dp = Dispatcher(bot)
 download_callback = CallbackData('https', 'url')
 
