@@ -8,7 +8,7 @@ import os
 import youtube_dl
 import logging
 
-from . import settings
+import settings
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=settings.API_TOKEN)
@@ -88,16 +88,19 @@ async def send_download_button(url):
 
 @dp.message_handler(commands=['start', 'help'])
 async def send_welcome(message: types.Message):
+    """
+    This function send starting message to user
+    :param message:
+    :return:
+    """
     await message.reply(
-        """
-        Hi, it is bot for downloading music from youtube.
-        This is how to use it:
-        /music [link to video]
-            bot will send you mp3-file.
-        /search [request]
-            bot will send you first 5 videos that are the result of 
-            searching on YouTube and then you can choose your video.
-        """
+        'Hi, it is bot for downloading music from youtube.'
+        'This is how to use it:\n'
+        '/music [link to video]\n'
+        'bot will send you mp3-file.\n'
+        '/search [request]\n'
+        'bot will send you first 5 videos that are the result of searching on YouTube and then you can choose your '
+        'video. '
     )
 
 
