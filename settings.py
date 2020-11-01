@@ -1,4 +1,4 @@
-TELEGRAM_API_TOKEN = '-'
+TELEGRAM_API_TOKEN = '1329098332:AAF1yP2menisi0uE3P5CSP5MnvcuNoiW-iY'
 YOUTUBE_API = '-'
 SEARCH_URL = 'https://www.youtube.com/results?search_query='
 YOUTUBE_URL = 'https://www.youtube.com/watch?v='

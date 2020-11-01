@@ -62,10 +62,11 @@ async def send_music_file(message_data):
     """
     if isinstance(message_data, types.Message):
         data, filename = download_music_file(message_data.text[7:])
-        await message_data.answer_audio(data)
+        await message_data.answer_audio(data, title=filename[:-4])
+        await bot.delete_message(message_data.chat.id, message_data.message_id)
     else:
         data, filename = download_music_file(message_data.data)
-        await message_data.message.answer_audio(data)
+        await message_data.message.answer_audio(data, title=filename[:-4])
 
     os.remove(filename)
 
